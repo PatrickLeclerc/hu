@@ -99,7 +99,7 @@ void initTIM(TIM_t* tim){
 	//tim->tim_ptr->CR2 = TIM_CR2_MMS_1;
 	
 	/* NVIC and DMA */
-	if(tim->tcie){
+	if(tim->uie){
 		tim->tim_ptr->DIER |= TIM_DIER_UIE;// | TIM_DIER_UDE;
 		NVIC_EnableIRQ(TIM_IRQn);
 	}
@@ -140,20 +140,110 @@ void initGPIO(GPIO_t* gpio){
 	}
 	
 	/* MODER and OSPEEDR */
-	for(uint32_t i = 0; i < 16; i++)
+	for(int i = 0; i < 16; i++)
 		if((gpio->pins>>i)&1U){
 			//Clear
 			gpio->port_ptr->MODER 		&= ~(3U	<<(i*2));
 			gpio->port_ptr->OSPEEDR		&= ~(3U <<(i*2));
 			gpio->port_ptr->AFR[i>=8]	&= ~(15U	<<((i%8)*4));
 			//Set
-			gpio->port_ptr->MODER 		|= gpio->mode	<<(i*2);		 	 // in       out         af         an
-			gpio->port_ptr->OSPEEDR 	|= gpio->speed	<<(i*2);	// 4~8MHz   10~50MHz    10~50MHz   10~50MHz {see datasheet}
-			gpio->port_ptr->AFR[i>=8]	|= gpio->af		<<((i%8)*4);
+			gpio->port_ptr->MODER 		|= (uint32_t)gpio->mode		<<(i*2);
+			gpio->port_ptr->OSPEEDR 	|= (uint32_t)gpio->speed	<<(i*2);
+			gpio->port_ptr->AFR[i>=8]	|= gpio->af					<<((i%8)*4);
 		}
 	gpio->port_ptr->ODR = 0;
 }
+/* USART */
+void initUSART(USART_t* usart){
+	uint32_t USART_IRQn;
+	uint32_t apbn;
+	/* RCC */
+	switch(usart->n){
+			case 1:{
+				RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
+				usart->usart_ptr = USART1;
+				USART_IRQn = USART1_IRQn;
+				apbn = 2;
+				break;
+			}
+			case 2:{
+				RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+				usart->usart_ptr = USART2;
+				USART_IRQn = USART2_IRQn;
+				apbn = 1;
+				break;
+			}
+			case 3:{
+				RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
+				usart->usart_ptr = USART3;
+				USART_IRQn = USART3_IRQn;
+				apbn = 1;
+				break;
+			}
+			case 4:{
+				RCC->APB1ENR |= RCC_APB1ENR_UART4EN;
+				usart->usart_ptr = UART4;
+				USART_IRQn = UART4_IRQn;
+				apbn = 1;
+				break;
+			}
+			case 5:{
+				RCC->APB1ENR |= RCC_APB1ENR_UART5EN;
+				usart->usart_ptr = UART5;
+				USART_IRQn = UART5_IRQn;
+				apbn = 1;
+				break;
+			}
+			case 6:{
+				RCC->APB2ENR |= RCC_APB2ENR_USART6EN;
+				usart->usart_ptr = USART6;
+				USART_IRQn = USART6_IRQn;
+				apbn = 2;
+				break;
+			}
+			default:{
+				return;
+			}
+	}
+	//EN TX and RX for now
+	usart->usart_ptr->CR1 = USART_CR1_TE_Pos | USART_CR1_RE;
+	
+	/* Baudrate */
+	if(apbn == 1)
+		usart->usart_ptr->BRR = (SystemCoreClock/2) / (usart->br);
+	else 
+		usart->usart_ptr->BRR = (SystemCoreClock/4) / (usart->br);
+	
+	/* IRQ */
+	USART2->CR1 |= (usart->rxie << USART_CR1_RXNEIE_Pos) | (usart->txie << USART_CR1_TXEIE_Pos);
+	if(usart->rxie || usart->txie)
+		NVIC_EnableIRQ(USART2_IRQn);
+	
+	/* Enable */
+	USART2->CR1 |= USART_CR1_UE;
 
+}
+//printf
+int stdin_getchar (void){
+	//USART2
+	static const int max = 1000;
+	int cnt = 0;
+	while(!(USART2->SR & USART_SR_RXNE))
+		if(cnt++>=max)
+			return -1;
+	return (int)USART2->DR;
+}
+int stdout_putchar (int ch){
+	//USART2
+	static const int max = 1000;
+	int cnt = 0;
+	while(!(USART2->SR & USART_SR_TXE))
+		if(cnt++>=max)
+			return -1;
+	USART2->DR = (uint32_t)ch;
+	return ch;
+}
+/*DMA*/
 void initDMA(DMA_t* dma){
 	uint32_t DMA_IRQn;
 	/*RCC*/
@@ -271,33 +361,41 @@ void initDMA(DMA_t* dma){
 	dma->stream_ptr->NDTR = dma->ndtr;
 		
 	/* Size, Priority and Increment */
-	dma->stream_ptr->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1;
+	dma->stream_ptr->CR |= ((uint32_t)dma->psize << DMA_SxCR_PSIZE_Pos) | ((uint32_t)dma->msize << DMA_SxCR_MSIZE_Pos);
 	dma->stream_ptr->CR |= DMA_SxCR_PL_Msk;
-	dma->stream_ptr->CR |= DMA_SxCR_PINC;
+	dma->stream_ptr->CR |= (dma->pinc << DMA_SxCR_PINC_Pos) | (dma->minc << DMA_SxCR_MINC_Pos);
 	dma->stream_ptr->FCR = 0U;
-		
+	
 	/* Direction */
-	dma->stream_ptr->CR |= DMA_SxCR_DIR_1;//Mem2Mem
+	dma->stream_ptr->CR |= ((uint32_t)dma->dir << DMA_SxCR_DIR_Pos);
 	
 	/* CIRC */
-	//dma->stream_ptr->CR |= DMA_SxCR_CIRC;//|DMA_SxCR_DBM;
-
-	/* IRQ */
-	dma->stream_ptr->CR |= DMA_SxCR_TCIE;
-	NVIC_EnableIRQ(DMA_IRQn);
+	dma->stream_ptr->CR |= (dma->circ << DMA_SxCR_CIRC_Pos);
 	
-	/* Enable */
+	/* DBM */
+	dma->stream_ptr->CR |= (dma->dbm << DMA_SxCR_DBM_Pos);
+	
+	/* IRQ */
+	dma->stream_ptr->CR |= (dma->htie << DMA_SxCR_HTIE_Pos) | (dma->tcie << DMA_SxCR_TCIE_Pos);
+	if(dma->htie || dma->tcie)
+		NVIC_EnableIRQ(DMA_IRQn);
+	
+	///* Enable */
 	//dma->stream_ptr->CR |= DMA_SxCR_EN;
 }
 void reloadDMA(DMA_t* dma){	
 	dma->stream_ptr->CR &= ~DMA_SxCR_EN;
 	/* M0AR, M1AR, PAR NDTR*/
 	dma->stream_ptr->M0AR = dma->m0ar;
-	//dma_stream->M1AR = dma->m1ar;
+	dma->stream_ptr->M1AR = dma->m1ar;
 	dma->stream_ptr->PAR  = dma->par;
 	dma->stream_ptr->NDTR = dma->ndtr;
 }
 
 void enableDMA(DMA_t* dma){	
 	dma->stream_ptr->CR |= DMA_SxCR_EN;
+}
+
+void disableDMA(DMA_t* dma){	
+	dma->stream_ptr->CR &= ~DMA_SxCR_EN;
 }

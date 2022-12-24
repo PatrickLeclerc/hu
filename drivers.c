@@ -215,33 +215,13 @@ void initUSART(USART_t* usart){
 		usart->usart_ptr->BRR = (SystemCoreClock/4) / (usart->br);
 	
 	/* IRQ */
-	USART2->CR1 |= (usart->rxie << USART_CR1_RXNEIE_Pos) | (usart->txie << USART_CR1_TXEIE_Pos);
+	usart->usart_ptr->CR1 |= (usart->rxie << USART_CR1_RXNEIE_Pos) | (usart->txie << USART_CR1_TXEIE_Pos);
 	if(usart->rxie || usart->txie)
-		NVIC_EnableIRQ(USART2_IRQn);
+		NVIC_EnableIRQ(USART_IRQn);
 	
 	/* Enable */
-	USART2->CR1 |= USART_CR1_UE;
+	usart->usart_ptr->CR1 |= USART_CR1_UE;
 
-}
-//printf
-int stdin_getchar (void){
-	//USART2
-	static const int max = 1000;
-	int cnt = 0;
-	while(!(USART2->SR & USART_SR_RXNE))
-		if(cnt++>=max)
-			return -1;
-	return (int)USART2->DR;
-}
-int stdout_putchar (int ch){
-	//USART2
-	static const int max = 1000;
-	int cnt = 0;
-	while(!(USART2->SR & USART_SR_TXE))
-		if(cnt++>=max)
-			return -1;
-	USART2->DR = (uint32_t)ch;
-	return ch;
 }
 /*DMA*/
 void initDMA(DMA_t* dma){

@@ -1,11 +1,11 @@
 extern "C"{
 #include "drivers.h"
 #include "it.h"
+#include "stdio.h"
 }
 #define BUFF_SIZE 1024
 /* IRQ flags */
 volatile int tim2_flag = 0;
-
 int main(){
 	/* RCC */
 	initClock(180U);
@@ -20,7 +20,7 @@ int main(){
 			tab_src[i][j] = (i+1)*j;
 	
 	/* Peripherals */
-	for(uint32_t i = 0; i < 8;i++){
+	for(uint32_t i = 0; i < 8;i++){//DMA
 		dma[i].n		= 2;
 		dma[i].stream	= i;
 		dma[i].ch		= 0;
@@ -40,18 +40,19 @@ int main(){
 		dma[i].htie		= 0;
 	}
 	
-	TIM_t tim2;//TIM
+	TIM_t tim2;{//TIM
 		TIM_t* tim 		= &tim2;
 		tim->n			= 0x2U;
 		tim->psc		= 0x1U;
-		uint32_t freq = 1000;
+		uint32_t freq 	= 1000;
 		tim->arr		= (SystemCoreClock/4)/freq-1;
-		tim->uie		= 0x1U;
+		tim->uie		= 0x1U;}
 	
-	/* TIM */
 	for(uint32_t i = 0; i < 8;i++)
 		initDMA(&dma[i]);
 	initTIM(&tim2);
+	initCOMPORT();
+	
 	int once = 1;
 	while(1){
 		if(once){
@@ -59,8 +60,12 @@ int main(){
 				enableDMA(&dma[i]);
 			once=0;
 		}
-		if(tim2_flag)
+		if(tim2_flag){
 			tim2_flag = 0;
+			int res = printf("Hello World!\r\n");
+			if(res == -1)
+				res = 0;
+		}
 	}
 }
 

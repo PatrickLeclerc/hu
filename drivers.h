@@ -19,7 +19,7 @@ typedef struct __attribute__((__packed__)) GPIO{
 	uint32_t			pins;
 	uint32_t			speed;
 	uint32_t			mode;
-	uint8_t				af;
+	uint32_t				af;
 }GPIO_t;
 
 typedef struct TIM{

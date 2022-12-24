@@ -23,10 +23,11 @@ int main(){
 		dma.ndtr	= 0;
 	}
 	{//GPIO
-		gpio.port = 'C';
-		gpio.pins = 3;
+		gpio.port = 'A';
+		gpio.pins = 3U;
+		gpio.mode = 1U;
 		gpio.speed= 0;
-		gpio.af		= 0;
+		gpio.af		= 0xA;
 	}
 	{//TIM
 		tim.n		= 2;

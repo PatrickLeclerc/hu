@@ -140,13 +140,16 @@ void initGPIO(GPIO_t* gpio){
 	}
 	
 	/* MODER and OSPEEDR */
-	gpio->port_ptr->MODER = 0;
-	gpio->port_ptr->OSPEEDR = 0;
 	for(uint32_t i = 0; i < 16; i++)
 		if((gpio->pins>>i)&1U){
-			gpio->port_ptr->MODER 		|= (gpio->mode	<<(i*GPIO_MODER_MODE1_Pos));		 	 // in       out         af         an
-			gpio->port_ptr->OSPEEDR 	|= (gpio->speed	<<(i*GPIO_OSPEEDR_OSPEED1_Pos));	// 4~8MHz   10~50MHz    10~50MHz   10~50MHz {see datasheet}
-			//gpio->port_ptr->AFR[i>=8]	|= (gpio->af	<<((i%8)*GPIO_AFRL_AFRL1));
+			//Clear
+			gpio->port_ptr->MODER 		&= ~(3U	<<(i*2));
+			gpio->port_ptr->OSPEEDR		&= ~(3U <<(i*2));
+			gpio->port_ptr->AFR[i>=8]	&= ~(15U	<<((i%8)*4));
+			//Set
+			gpio->port_ptr->MODER 		|= gpio->mode	<<(i*2);		 	 // in       out         af         an
+			gpio->port_ptr->OSPEEDR 	|= gpio->speed	<<(i*2);	// 4~8MHz   10~50MHz    10~50MHz   10~50MHz {see datasheet}
+			gpio->port_ptr->AFR[i>=8]	|= gpio->af		<<((i%8)*4);
 		}
 	gpio->port_ptr->ODR = 0;
 }

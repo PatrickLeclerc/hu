@@ -1,3 +1,5 @@
+#ifndef DRIVERS_H
+#define DRIVERS_H
 #include "stm32f446xx.h"
 /* Structs */
 typedef struct DMA{
@@ -13,7 +15,7 @@ typedef struct DMA{
 
 typedef struct __attribute__((__packed__)) GPIO{
 	GPIO_TypeDef* 		port_ptr;
-	char 				  port;
+	char 				port;
 	uint32_t			pins;
 	uint32_t			speed;
 	uint32_t			mode;
@@ -36,3 +38,4 @@ void initGPIO(GPIO_t* gpio);
 void initDMA(DMA_t* dma);
 void reloadDMA(DMA_t* dma);
 void enableDMA(DMA_t* dma);
+#endif

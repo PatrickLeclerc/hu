@@ -1,19 +1,21 @@
 extern "C"{
 #include "drivers.h"
+#include "it.h"
 }
 
-/* Peripherals */
-static DMA_t dma;
-static GPIO_t gpio;
-static TIM_t tim;
+
 
 /* IRQ flags */
 static volatile int tim_flag = 0;
 
 int main(){
+	/* Peripherals */
+	DMA_t dma = {};
+	GPIO_t gpio = {};
+	TIM_t tim = {};
 	{//DMA
 		dma.n 		= 0;
-		dma.stream= 0;
+		dma.stream  = 0;
 		dma.ch 		= 0;
 		dma.m0ar 	= 0;
 		dma.m1ar 	= 0;
@@ -21,7 +23,7 @@ int main(){
 		dma.ndtr	= 0;
 	}
 	{//GPIO
-		gpio.port = 'A';
+		gpio.port = 'C';
 		gpio.pins = 3;
 		gpio.speed= 0;
 		gpio.af		= 0;
@@ -40,10 +42,4 @@ int main(){
 	}
 }
 
-void TIM2_IRQHandler();
-void TIM2_IRQHandler(){
-	if(tim.tim_ptr->SR & TIM_SR_UIF){
-		tim.tim_ptr->SR &= ~TIM_SR_UIF;
-		tim_flag = 1;
-	}
-}
+

@@ -8,8 +8,6 @@ void startup(uint32_t hclk,TIM_t* tim,GPIO_t* gpio,DMA_t* dma){
 	initTIM(tim);
 }
 void initClock(uint32_t hclk){
-	///*HPRE*/
-	//RCC->CFGR |= RCC_CFGR_HPRE_DIV8;
 	/*APB1 45MHz Max*/
 	RCC->CFGR |= RCC_CFGR_PPRE1_DIV4;
 	/*APB2 90MHz Max*/
@@ -148,7 +146,7 @@ void initGPIO(GPIO_t* gpio){
 		if((gpio->pins>>i)&1U){
 			gpio->port_ptr->MODER 		|= (gpio->mode	<<(i*GPIO_MODER_MODE1_Pos));		 	 // in       out         af         an
 			gpio->port_ptr->OSPEEDR 	|= (gpio->speed	<<(i*GPIO_OSPEEDR_OSPEED1_Pos));	// 4~8MHz   10~50MHz    10~50MHz   10~50MHz {see datasheet}
-			gpio->port_ptr->AFR[i>=8]	|= (gpio->af	<<((i%8)*GPIO_AFRL_AFRL1));
+			//gpio->port_ptr->AFR[i>=8]	|= (gpio->af	<<((i%8)*GPIO_AFRL_AFRL1));
 		}
 	gpio->port_ptr->ODR = 0;
 }

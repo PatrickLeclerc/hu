@@ -11,17 +11,16 @@ int main(){
 	/* RCC */
 	initClock(180U);
 	printf("RCC\r\n");
-	/* Tables */ 
 	
+	/* Tables */ 
 	static uint32_t tab_src[8][BUFF_SIZE];
 	static uint32_t tab_dst[8][BUFF_SIZE];
-	
 	for(uint32_t i = 0; i < 8;i++)
 		for(uint32_t j = 0; j < BUFF_SIZE;j++)
 			tab_src[i][j] = (i+1)*j;
-	
 	printf("Tables\r\n");
-	/* Peripherals */
+	
+	/* Peripherals config */
 	DMA_t dma[8];
 	for(uint32_t i = 0; i < 8;i++){//DMA
 		dma[i].n		= 2;
@@ -42,19 +41,27 @@ int main(){
 		dma[i].tcie		= 0;
 		dma[i].htie		= 0;
 	}
-	
-	TIM_t tim2;{//TIM
-		TIM_t* tim 		= &tim2;
-		tim->n			= 0x2U;
-		tim->psc		= 0x1U;
-	uint32_t freq 	= 1000;
-		tim->arr		= (SystemCoreClock/4)/freq-1;
-		tim->uie		= 0x1U;}
+	TIM_t tim;{//TIM
+		uint32_t freq 	= 1000;
+		tim.n	= 0x1U;
+		tim.psc	= 0x1U;
+		tim.arr	= (SystemCoreClock/2)/freq-1;
+		tim.urs	= 1;
+		tim.uie	= 0;
+		tim.mms	= TIM_MMS_UP;
+		tim.ccds= TIM_CCDS_UP;
+		tim.ts	= TIM_TS_ITR0;
+		tim.sms	= TIM_SMS_DIS;
+	}
 	printf("Peripherals Config\r\n");
+	
+	/* Peripherals init */
 	for(uint32_t i = 0; i < 8;i++)
 		initDMA(&dma[i]);
-	initTIM(&tim2);	
+	initTIM(&tim);	
 	printf("Peripherals Init\r\n");
+	
+	/* FSM */
 	while(1){
 		if(tim2_flag){
 			tim2_flag = 0;

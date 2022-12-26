@@ -92,21 +92,25 @@ void initTIM(TIM_t* tim){
 	}
 
 	/* TIM */
-	tim->tim_ptr->CR1 = TIM_CR1_ARPE | TIM_CR1_URS;
+	tim->tim_ptr->CR1 = TIM_CR1_ARPE;
+	if(tim->urs)
+		tim->tim_ptr->CR1 |= TIM_CR1_URS
 	tim->tim_ptr->PSC = tim->psc;
 	tim->tim_ptr->ARR = tim->arr;
 	tim->tim_ptr->CNT = 0U;
-	//tim->tim_ptr->CR2 = TIM_CR2_MMS_1;
+	
+	/* Master */
+	tim->tim_ptr->CR1 |= (tim->mms << TIM_CR2_MMS_Pos) | (tim->ccds << TIM_CR2_CCDS_Pos);
+	
+	/* Slave */
+	tim->tim_ptr->SMCR |= (tim->ts << TIM_SMCR_TS_Pos) | (tim->sms << TIM_SMCR_SMS_Pos);
 	
 	/* NVIC and DMA */
 	if(tim->uie){
 		tim->tim_ptr->DIER |= TIM_DIER_UIE;// | TIM_DIER_UDE;
 		NVIC_EnableIRQ(TIM_IRQn);
 	}
-	
-	/*Update registers */
-	tim->tim_ptr->EGR |= TIM_EGR_UG;
-	
+		
 	/* Enable */
 	tim->tim_ptr->CR1 |= TIM_CR1_CEN;
 	
